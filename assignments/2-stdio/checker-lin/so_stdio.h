@@ -43,6 +43,8 @@ struct _so_file {
 	int fd;
 	int len;
 	int last_op;
+	int read_size;
+	int actual_read_size;
 };
 
 typedef struct _so_file SO_FILE;
