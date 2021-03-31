@@ -5,6 +5,6 @@
 #define FALSE 0
 #define BUF_MAX_SIZE 4096
 
-enum operations{READ, WRITE, FLUSH};
+enum operations {READ, WRITE, FLUSH};
 
 #endif

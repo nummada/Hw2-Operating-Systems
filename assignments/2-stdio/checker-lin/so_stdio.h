@@ -37,7 +37,7 @@
 
 
 struct _so_file {
-	char buf[BUF_MAX_SIZE];
+	unsigned char buf[BUF_MAX_SIZE];
 	int read_and_append_mode;
 	int intern_offset;
 	int fd;

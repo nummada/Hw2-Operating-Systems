@@ -7,6 +7,7 @@
 #include "so_stdio.h"
 #include "utils.h"
 #include "my_defines.h"
+#include "huge_file.h"
 
 SO_FILE *so_fopen(const char *pathname, const char *mode)
 {
@@ -39,32 +40,26 @@ int so_fclose(SO_FILE *stream)
 }
 
 int so_fgetc(SO_FILE *stream)
-{	
+{
 	int size;
 	int character;
 
-	if(stream->last_op == WRITE) {
-		printf("\n\n read dupa write!!!!!!!!!! \n\n");
-	}
+	if (stream->last_op == WRITE)
+		printf("\n\nread dupa write!!!!!!!!!!\n\n");
 
 	if (stream->len == stream->intern_offset) {
-		if(stream->len == BUF_MAX_SIZE) {
+		if (stream->len == BUF_MAX_SIZE) {
 			size = read(stream->fd, stream->buf, BUF_MAX_SIZE);
-			if (size <= 0){
-				// printf("eroareeeeeeeeeeeee");
+			if (size <= 0)
 				return SO_EOF;
-			}
 			stream->len = size;
 			stream->intern_offset = 0;
 		} else {
-			size = read(stream->fd, stream->buf + stream->len, BUF_MAX_SIZE - stream->len);
-			// printf("size: [%d]\n", size);
-			if (size <= 0){
-				// printf("eroareeeeeeeeeeeee");
+			size = read(stream->fd, stream->buf + stream->len,
+				BUF_MAX_SIZE - stream->len);
+			if (size <= 0)
 				return SO_EOF;
-			}
 			stream->len += size;
-			// printf("[%d][%d]\n", stream->len, stream->intern_offset);
 		}
 	}
 
@@ -82,44 +77,43 @@ int so_fileno(SO_FILE *stream)
 size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 {
 	int i, j;
-	char buf[size];
+	unsigned char buf[size];
 	int recv_char;
 	unsigned char character;
 	int number_of_elements = 0;
 	int finish_loop = 0;
 	int sum = 0;
+
 	for (i = 0 ; i < nmemb ; i++) {
 		memset(buf, 0, size);
 
 		for (j = 0 ; j < size ; j++) {
 			recv_char = so_fgetc(stream);
 			if (recv_char == SO_EOF) {
-				printf("ok");
 				finish_loop = 1;
 				break;
-			} else {
-				character = (unsigned char)recv_char;
 			}
-			// printf("%x ", character);
+			character = (unsigned char)recv_char;
+
 			buf[j] = (unsigned char)character;
 			sum += 1;
 		}
 		if (finish_loop == 1)
 			break;
-		strncpy(ptr + (i * size), buf, size);
+		memcpy(ptr + (i * size), buf, size);
 		number_of_elements += 1;
 	}
 
-	if(finish_loop == 1) return 0;
-	// printf("[%d]\n", sum);
+	if (finish_loop == 1)
+		return 0;
 	return number_of_elements;
-
 }
 
 int so_fputc(int c, SO_FILE *stream)
 {
 
 }
+
 size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 {
 
@@ -160,42 +154,8 @@ SO_FILE *so_popen(const char *command, const char *type)
 
 }
 
+
 int main(void)
 {
-	SO_FILE *file = so_fopen("myinput", "r+");
-	char* ptr;
-	int elemente_size = 4;
-	int no_of_elements = 500;
-	ptr = calloc(no_of_elements, elemente_size);
-	int no = so_fread(ptr, elemente_size, no_of_elements, file);
-	// printf("[%s]\n", ptr);
-	printf("[%d]\n", no);
-	// printf("numarul de elemente:[%d], buffer: [%s]", no, ptr);
-	
-	
-	// int characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	// characater = so_fgetc(file);
-	// printf("[%c]\n", characater);
-	
-	so_fclose(file);
 
 }

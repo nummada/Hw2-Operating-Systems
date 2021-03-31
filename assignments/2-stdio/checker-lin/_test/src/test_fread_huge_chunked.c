@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
 	target_fd = so_fileno(f);
 
-	num_sys_read = 0;
+	num_sys_read = 0;	
 
 	// read the rest of the file in chunks
 	total = 0;
@@ -93,6 +93,15 @@ int main(int argc, char *argv[])
 	}
 
 	FAIL_IF(num_sys_read != 49, "Incorrect number of reads: got %d, expected %d\n", num_sys_read, 49);
+	// unsigned char x;
+	// for (int i = 0; i < buf_len; i++) {
+	// 	x = tmp[i];
+	// 	if (x != buf[i]) {
+	// 		printf("i[%d] tmp[%d][%02x] <=> buf[%d][%02x]\n", i, x, x, buf[i], buf[i]);
+	// 		break;
+	// 	}
+	// }
+
 
 	FAIL_IF(memcmp(tmp, buf, buf_len), "Incorrect data\n");
 
