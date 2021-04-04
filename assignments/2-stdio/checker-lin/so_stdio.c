@@ -28,6 +28,7 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 	so_file->last_op = -1;
 	so_file->read_size = 0;
 	so_file->actual_read_size = 0;
+	so_file->error = 0;
 
 	return so_file;
 }
@@ -35,8 +36,10 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 int so_fclose(SO_FILE *stream)
 {
 	so_fflush(stream);
-	if (close(stream->fd) < 0)
+	if (close(stream->fd) < 0) {
+		stream->error = 1;
 		return SO_EOF;
+	}
 	free(stream);
 	return 0;
 }
@@ -45,23 +48,38 @@ int so_fgetc(SO_FILE *stream)
 {
 	int size;
 	int character;
+	int res;
 
-	if (stream->last_op == WRITE)
+	if (stream->last_op == WRITE) {
+		res = so_fflush(stream);
+		if (res == SO_EOF) {
+			stream->error = 1;
+			return SO_EOF;
+		}
+		stream->actual_read_size = 0;
+		stream->intern_offset = 0;
+		stream->len = 0;
+		stream->read_size = 0;
 		printf("\n\nread dupa write!!!!!!!!!!\n\n");
+	}
 
 	if (stream->len == stream->intern_offset) {
 		if (stream->len == BUF_MAX_SIZE) {
 			size = read(stream->fd, stream->buf, BUF_MAX_SIZE);
-			if (size <= 0)
+			if (size <= 0) {
+				stream->error = 1;
 				return SO_EOF;
+			}
 			stream->read_size += size;
 			stream->len = size;
 			stream->intern_offset = 0;
 		} else {
 			size = read(stream->fd, stream->buf + stream->len,
 				BUF_MAX_SIZE - stream->len);
-			if (size <= 0)
+			if (size <= 0) {
+				stream->error = 1;
 				return SO_EOF;
+			}
 			stream->read_size += size;
 			stream->len += size;
 		}
@@ -96,6 +114,7 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 			recv_char = so_fgetc(stream);
 			if (recv_char == SO_EOF) {
 				finish_loop = 1;
+				stream->error = 1;
 				break;
 			}
 			character = (unsigned char)recv_char;
@@ -112,16 +131,22 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 	if (finish_loop == 1)
 		return 0;
 	stream->last_op = READ;
-	//printf("[%d]\n", stream->actual_read_size);
 	return number_of_elements;
 }
 
 int so_fputc(int c, SO_FILE *stream)
 {
-	int sz;
+	int sz, difference;
+	int res;
 
-	if (stream->last_op == READ)
-		printf("write dupa read");
+	if (stream->last_op == READ) {
+		difference = stream->read_size - stream->actual_read_size;
+		res = so_fseek(stream, -difference, SEEK_CUR);
+		stream->actual_read_size = 0;
+		stream->intern_offset = 0;
+		stream->read_size = 0;
+		stream->len = 0;
+	}
 
 	if (stream->intern_offset == BUF_MAX_SIZE) {
 		sz = so_fflush(stream);
@@ -180,12 +205,22 @@ int so_fflush(SO_FILE *stream)
 
 long so_ftell(SO_FILE *stream)
 {
-	return lseek(stream->fd, stream->actual_read_size, SEEK_SET);
+	int difference = stream->read_size - stream->actual_read_size;
+
+	so_fseek(stream, -difference, SEEK_CUR);
+	stream->read_size = 0;
+	stream->actual_read_size = 0;
+	return lseek(stream->fd, 0, SEEK_CUR);
 }
 
 int so_fseek(SO_FILE *stream, long offset, int whence)
 {
+	int res = lseek(stream->fd, offset, whence);
 
+	if (res == -1)
+		return res;
+
+	return 0;
 }
 
 int so_feof(SO_FILE *stream)

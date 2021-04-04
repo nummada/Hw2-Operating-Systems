@@ -45,6 +45,7 @@ struct _so_file {
 	int last_op;
 	int read_size;
 	int actual_read_size;
+	int error;
 };
 
 typedef struct _so_file SO_FILE;
