@@ -6,9 +6,9 @@ Grupă: 334CB
 ## Soluția de ansamblu:
 * Soluția de ansamblu este bazată pe folosirea funcțiilor prezente în biblioteca `fcntl.h` pentru a implementa o parte din funcționalitatea bibliotecii `stdio.h`. 
 * În cadrul temei este folosită o structură de date SO_FILE care conține un buffer, un offset intern de citire/scriere, file-descriptor, ultima operație efectuată asupra fișierului, cât și alte variabile de stare care reprezintă starea curentă a fișierului.
->* La nivel general, funcțiile pot fi descrise în felul următor:
-	* so_fopen: folosește apelul `open`  pentru a deschide un fișier în modul precizat ca și parametru al funcției
-	* so_fclose: se folosește de `so_fflush` pentru a scrie bufferul în fișier, după care închide fișierul reprezentat de file-descriptor cu apelul `close`
+* La nivel general, funcțiile pot fi descrise în felul următor:
+	* **so_fopen**: folosește apelul `open`  pentru a deschide un fișier în modul precizat ca și parametru al funcției
+	* **so_fclose**: se folosește de `so_fflush` pentru a scrie bufferul în fișier, după care închide fișierul reprezentat de file-descriptor cu apelul `close`
 	* **so_fgetc**: folosește apelul `read` și scrie într-un buffer. Funcția are grijă de cazul în care apelul nu întoarce numărul de bytes specificat ca și argument, iar la următorul apel de citire, în cazul în care s-a citit tot bufferul până la acel index, funcția va citi doar cât mai are liber în buffer. Adică, daca **offsetul intern** al bufferului a ajuns la indexul **i**, iar în buffer au fost citiți doar *i* octeți, urmărul apel de read va încerca să umple bufferul, nu să îl reinițializeze. Funcția returneaza caracterul care se află la poziția capului curent de citire
 	*  **so_fileno**:  returnează file-descriptorul structurii de date *SO_FILE*
 	* **so_fread**: se folosește de funcția deja implementată `so_fgetc`. Se încearcă citirea a mai multor blocuri de dimensiune setată folosind 2 *foruri* imbricate și salvarea datelor cititire in bufferul primit ca parametru
