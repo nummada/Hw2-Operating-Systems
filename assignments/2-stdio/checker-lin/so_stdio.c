@@ -36,10 +36,16 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 
 int so_fclose(SO_FILE *stream)
 {
-	if (stream->last_op == WRITE)
-		so_fflush(stream);
+	int res;
+
+	if (stream->last_op == WRITE) {
+		res = so_fflush(stream);
+		if (res == SO_EOF) {
+			free(stream);
+			return SO_EOF;
+		}
+	}
 	if (close(stream->fd) < 0) {
-		stream->error = 1;
 		free(stream);
 		return SO_EOF;
 	}
@@ -157,10 +163,12 @@ int so_fputc(int c, SO_FILE *stream)
 
 	if (stream->intern_offset == BUF_MAX_SIZE) {
 		sz = so_fflush(stream);
-		if (sz == -1)
+		if (sz == -1) {
+			stream->error = 1;
 			return SO_EOF;
+		}
 		stream->intern_offset = 0;
-		//printf("dupa write [%d]\n", lseek(stream->fd, 0, SEEK_CUR));
+		stream->read_size += BUF_MAX_SIZE;
 	}
 
 	stream->buf[stream->intern_offset] = c;
@@ -183,6 +191,7 @@ size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 			putc_res = so_fputc(((unsigned char *) ptr)[idx], stream);
 			if (putc_res == -1) {
 				error_break = 1;
+				stream->error = 1;
 				break;
 			}
 		}
@@ -199,13 +208,16 @@ size_t so_fwrite(const void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 int so_fflush(SO_FILE *stream)
 {	int sz;
 	int bytes_to_write = stream->intern_offset;
-	int bytes_wrote = 0;
+	int written_bytes = 0;
 
-	while (bytes_wrote != bytes_to_write) {
-		sz = write(stream->fd, stream->buf, bytes_to_write - bytes_wrote);
-		if (sz == -1)
+	while (written_bytes != bytes_to_write) {
+		sz = write(stream->fd, stream->buf + written_bytes,
+			bytes_to_write - written_bytes);
+		if (sz == -1) {
+			stream->error = 1;
 			return -1;
-		bytes_wrote += sz;
+		}
+		written_bytes += sz;
 	}
 	return 0;
 }
@@ -224,8 +236,10 @@ int so_fseek(SO_FILE *stream, long offset, int whence)
 {
 	int res = lseek(stream->fd, offset, whence);
 
-	if (res == -1)
+	if (res == -1) {
+		stream->error = 1;
 		return res;
+	}
 
 	return 0;
 }
@@ -237,6 +251,7 @@ int so_feof(SO_FILE *stream)
 
 int so_ferror(SO_FILE *stream)
 {
+	return stream->error;
 }
 
 int so_pclose(SO_FILE *stream)
@@ -247,34 +262,4 @@ int so_pclose(SO_FILE *stream)
 SO_FILE *so_popen(const char *command, const char *type)
 {
 
-}
-
-
-int main(void)
-{
-	SO_FILE *file = so_fopen("fisier_test", "w");
-
-	// so_fputc('a', file);
-	// so_fputc('b', file);
-	// so_fputc('c', file);
-	// so_fputc('d', file);
-	// so_fputc('e', file);
-	// so_fputc('f', file);
-	// so_fputc('g', file);
-	// so_fputc('h', file);
-	// so_fputc('i', file);
-	// so_fputc('j', file);
-	// so_fputc('k', file);
-	// so_fputc('l', file);
-	// so_fputc('m', file);
-	// so_fputc('n', file);
-	// so_fputc('o', file);
-	// so_fputc('p', file);
-	// so_fputc('q', file);
-	// for (int i = 0 ; i < file->intern_offset ; i++)
-	//	printf("%c", file->buf[i]);
-	char *data = "12134tgrhbfvdc";
-
-	/*so_fwrite(buf, 1, 200000, file);*/
-	so_fclose(file);
 }
