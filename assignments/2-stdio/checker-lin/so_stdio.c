@@ -121,6 +121,7 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 			if (recv_char == SO_EOF) {
 				finish_loop = 1;
 				stream->error = 1;
+				stream->eof = 1;
 				break;
 			}
 			character = (unsigned char)recv_char;
@@ -135,7 +136,7 @@ size_t so_fread(void *ptr, size_t size, size_t nmemb, SO_FILE *stream)
 	}
 
 	if (finish_loop == 1)
-		return 0;
+		return number_of_elements;
 	stream->last_op = READ;
 	return number_of_elements;
 }
