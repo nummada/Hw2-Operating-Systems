@@ -46,6 +46,7 @@ struct _so_file {
 	int read_size;
 	int actual_read_size;
 	int error;
+	int eof;
 };
 
 typedef struct _so_file SO_FILE;

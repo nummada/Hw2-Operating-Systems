@@ -29,15 +29,18 @@ SO_FILE *so_fopen(const char *pathname, const char *mode)
 	so_file->read_size = 0;
 	so_file->actual_read_size = 0;
 	so_file->error = 0;
+	so_file->eof = 0;
 
 	return so_file;
 }
 
 int so_fclose(SO_FILE *stream)
 {
-	so_fflush(stream);
+	if (stream->last_op == WRITE)
+		so_fflush(stream);
 	if (close(stream->fd) < 0) {
 		stream->error = 1;
+		free(stream);
 		return SO_EOF;
 	}
 	free(stream);
@@ -60,7 +63,6 @@ int so_fgetc(SO_FILE *stream)
 		stream->intern_offset = 0;
 		stream->len = 0;
 		stream->read_size = 0;
-		printf("\n\nread dupa write!!!!!!!!!!\n\n");
 	}
 
 	if (stream->len == stream->intern_offset) {
@@ -68,6 +70,8 @@ int so_fgetc(SO_FILE *stream)
 			size = read(stream->fd, stream->buf, BUF_MAX_SIZE);
 			if (size <= 0) {
 				stream->error = 1;
+				if (size == 0)
+					stream->eof = 1;
 				return SO_EOF;
 			}
 			stream->read_size += size;
@@ -77,6 +81,8 @@ int so_fgetc(SO_FILE *stream)
 			size = read(stream->fd, stream->buf + stream->len,
 				BUF_MAX_SIZE - stream->len);
 			if (size <= 0) {
+				if (size == 0)
+					stream->eof = 1;
 				stream->error = 1;
 				return SO_EOF;
 			}
@@ -153,6 +159,7 @@ int so_fputc(int c, SO_FILE *stream)
 		if (sz == -1)
 			return SO_EOF;
 		stream->intern_offset = 0;
+		//printf("dupa write [%d]\n", lseek(stream->fd, 0, SEEK_CUR));
 	}
 
 	stream->buf[stream->intern_offset] = c;
@@ -199,7 +206,6 @@ int so_fflush(SO_FILE *stream)
 			return -1;
 		bytes_wrote += sz;
 	}
-
 	return 0;
 }
 
@@ -225,12 +231,11 @@ int so_fseek(SO_FILE *stream, long offset, int whence)
 
 int so_feof(SO_FILE *stream)
 {
-
+	return stream->eof;
 }
 
 int so_ferror(SO_FILE *stream)
 {
-
 }
 
 int so_pclose(SO_FILE *stream)
