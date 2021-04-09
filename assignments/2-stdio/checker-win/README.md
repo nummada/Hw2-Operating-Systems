@@ -1,46 +1,42 @@
-This archive contains a test suite for testing the Operating System stdio
-library for Linux (`libso_stdio.so`). The test suite consists of several
-unit tests, each of them testing a different functionality of the library.
+Nume: Nuță Mihaela-Mădăline
+Grupă: 334CB
 
-# Archive Files
-The checker consists of the following files:
-* `README.md` - this file
-* `NMakefile.checker` - Makefile for automating the build process on Windows
-* `GNUmakefile` - Cygwin wrapper over NMakefile.checke
-* `run_all.sh` - script to run all tests defined
-* `_test` - directory that contains the following:
-  * `run_test.sh` - runs only a specific test
-  * `test_lib.sh` - a shell library used to run tests
-  * `src/*.c` - source code for each test
-  * `src/so_stdio.h` - so stdio header
-  * `Makefile` - Makefile used for building the tests
-  * `work/` - directory where tests output files are stored
+# Tema 2 SO
 
-# Checker
-The local directory must contain the so_stdio library (`so_stdio.dll` and 
-`so_stdio.lib`).
-Use `make` to properly run the entire test suite:
-```
-make all
-```
+## Soluția de ansamblu:
+* Soluția de ansamblu este bazată pe folosirea funcțiilor prezente în biblioteca `Windows.h` pentru a implementa o parte din funcționalitatea bibliotecii `stdio.h`. 
+* În cadrul temei este folosită o structură de date SO_FILE care conține un buffer, un offset intern de citire/scriere, file-HANDLE, ultima operație efectuată asupra fișierului, cât și alte variabile de stare care reprezintă starea curentă a fișierului.
+* La nivel general, funcțiile pot fi descrise în felul următor:
+	* **so_fopen**: folosește apelul `CreateFile`  pentru a deschide un fișier în modul precizat ca și parametru al funcției
+	* **so_fclose**: se folosește de `so_fflush` pentru a scrie bufferul în fișier, după care închide fișierul reprezentat de HANDLE cu apelul `CloseHandle`
+	* **so_fgetc**: folosește apelul `ReadFile` și scrie într-un buffer. Funcția are grijă de cazul în care apelul nu întoarce numărul de bytes specificat ca și argument, iar la următorul apel de citire, în cazul în care s-a citit tot bufferul până la acel index, funcția va citi doar cât mai are liber în buffer. Adică, daca **offsetul intern** al bufferului a ajuns la indexul **i**, iar în buffer au fost citiți doar *i* octeți, urmărul apel de ReadFile va încerca să umple bufferul, nu să îl reinițializeze. Funcția returneaza caracterul care se află la poziția capului curent de citire
+	*  **so_fileno**:  returnează file-HANDLE-ul structurii de date *SO_FILE*
+	* **so_fread**: se folosește de funcția deja implementată `so_fgetc`. Se încearcă citirea a mai multor blocuri de dimensiune setată folosind 2 *foruri* imbricate și salvarea datelor cititire in bufferul primit ca parametru
+	* **so_fputc**: folosește apelul `WriteFile` prin intermediul funcției *so_fflush*. Cât timp bufferul nu este plin, funcția pur și simplu salvează datele în buffer. Când bufferul se umple, el este scris în fișier și reinițializat. Dacă înainte, asupra fișierului a fost făcută o  operație de tip citire, se repoziționează offsetul fișierului și bufferul este reinițializat
+	* **so_fwrite**: la fel ca și *so_fread*, cu 2 foruri imbricate se folosește de funcția deja implementată `so_fputc`
+	* **so_fflush**: se folosește de offsetul intern al bufferului și scrie cu ajutorul apelului `WriteFile` într-o buclă, pentru a acoperi cazul în care apelul scrie mai puțin decât i s-a cerut
+	* **so_ftell**: se poziționeaza la offsetul real cu ajutorul `so_fseek` și se foloseste de apelul `SetFilePointer` pentru a returna offsetul real al fișierului: apelat cu offset = 0 și whence = SEEK_CUR, apelul returnează offsetul curent.
+	* **so_fseek**: se folosește de apelul `SetFilePointer`
+	* **so_feof**: returneaza variabila de stare a structurii de fișier deschisă, variabilă care este modificată de-a lungul programului în cazul în care s-a ajuns la END-OF-FILE
+	* **so_ferror**: returneaza variabila de stare a structurii de fișier deschisă care este modificată de-a lungul programului în cazul în care apare o eroare
+>**Utilitatea temei:**
 
-# Debug
-If you want to keep the output files after running a test, you have to set
-the `DO_CLEANUP` environment variable to `no`:
-```
-DO_CLEANUP=no make all
-```
+> Consider că tema a contribuit foarte mult la înțelegerea funcțiilor incluse în biblioteca stdio.h, înțelegerea importanței codurilor de eroare care se pot propaga între funcții, cât și la înțelegerea mai bună a diferențelor dintre `fread-ReadFile` / `fwrite-WriteFile` / `fopen-CreateFile` etc. Deoarece varianta rulata pe Windows a fost varianta de pe Linux modificată, a fost destul de important să integrezi apelurile specifice Windows intr-un cod care poate rula pe Linux, realizând astfel modificările care trebuie făcute, mai ales la nivel de parametrii sau `return values`.
 
-In order to run a single test, you can manually run the `run_test.sh` script:
-```
-_test/run_test.sh init
-_test/run_test.sh <test>
-_test/run_test.sh clean
-```
-where <test> is an integer specifying the test number
-# Cleanup
-To clean the files generated by the checker you have to run:
-```
-make clean
-make bclean
-```
+## Implementare
+Tema nu implementeaza partea legată de popen, iar acest lucru se observă la nivel de teste.
+* Cazuri speciale care au fost tratate:
+	* la nivel de citire, bufferul este in continuă creștere până la lungimea maximă, în cazul în care apelul `ReadFile` nu întoarce exact cât i s-a cerut
+	* la nivel de scriere, so_fflush se ocupa de cazul în care apelul `WriteFile` nu scrie exact cât i s-a cerut, ci mai puțin
+* Dificultăți întâmpinate:
+	* dificultatea în a găsi resurse unde se explică cu exactitate cum funcționeaza buffering-ul împreună cu apelurile fseek/ftell
+* Lucruri interesante descoperite pe parcurs
+	* trecerea de la `<fcntl.h>` la `<windows.h>`
+	* faptul că poți implementa si folosi propria librărie de input/output
+
+## Cum se compilează și cum se rulează?
+- Build: `nmake` -> se crează o bibliotecă dinamică `so_stdio.dll`
+
+Bibliografie
+-
+- a lot of **`docs.microsoft.com/`**
